@@ -6,6 +6,7 @@ export default function SearchBar({
   title,
   setTitle,
   onSearch,
+  onRandom,
 }) {
   return (
     <div>
@@ -26,6 +27,17 @@ export default function SearchBar({
         value={title}
       />
       <button onClick={() => onSearch(author, title)}>Search</button>
+      <button
+        style={{ marginLeft: "20px" }}
+        aria-label="Find for a random poem"
+        onClick={() => {
+          onRandom();
+          setAuthor("");
+          setTitle("");
+        }}
+      >
+        Randomize
+      </button>
     </div>
   );
 }

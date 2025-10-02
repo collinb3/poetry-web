@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */ // Needed for global.fetch
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchPoetData, callApi } from './ApiService';
+import { fetchPoetData, fetchRandomPoem, callApi } from './ApiService';
 import { BASE_ENDPOINT } from '../constants';
 
 // Mock fetch globally
@@ -130,7 +130,7 @@ describe('ApiService', () => {
       expect(result.data).toBeNull();
     });
 
-    it('calls base endpoint when no parameters provided', async () => {
+    it('calls random endpoint when no parameters provided', async () => {
       const mockData = [{ title: 'Random Poem' }];
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -139,7 +139,7 @@ describe('ApiService', () => {
 
       await callApi(null, null);
 
-      expect(global.fetch).toHaveBeenCalledWith(BASE_ENDPOINT);
+      expect(global.fetch).toHaveBeenCalledWith(`${BASE_ENDPOINT}/random`);
     });
   });
 
@@ -269,6 +269,109 @@ describe('ApiService', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         `${BASE_ENDPOINT}/author,title/Emily%20Dickinson;Hope`
       );
+    });
+  });
+
+  describe('fetchRandomPoem', () => {
+    it('calls random endpoint and sets data on success', async () => {
+      const mockData = [{ title: 'Random Poem', author: 'Unknown' }];
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const setPoetData = vi.fn();
+      const setError = vi.fn();
+      const setLoading = vi.fn();
+
+      await fetchRandomPoem(setPoetData, setError, setLoading);
+
+      expect(global.fetch).toHaveBeenCalledWith(`${BASE_ENDPOINT}/random`);
+      expect(setPoetData).toHaveBeenCalledWith(mockData);
+      expect(setError).toHaveBeenCalledWith(null);
+      expect(setLoading).toHaveBeenCalledWith(true);
+      expect(setLoading).toHaveBeenCalledWith(false);
+    });
+
+    it('sets error message when 404 status is returned', async () => {
+      const mockData = { status: 404, reason: 'Not found' };
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const setPoetData = vi.fn();
+      const setError = vi.fn();
+      const setLoading = vi.fn();
+
+      await fetchRandomPoem(setPoetData, setError, setLoading);
+
+      expect(setError).toHaveBeenCalledWith(
+        'No record found. Please check your spelling or try another author/title.'
+      );
+      expect(setLoading).toHaveBeenCalledWith(false);
+    });
+
+    it('sets error message when errorOccurred is true', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({ error: 'Server error' }),
+      });
+
+      const setPoetData = vi.fn();
+      const setError = vi.fn();
+      const setLoading = vi.fn();
+
+      await fetchRandomPoem(setPoetData, setError, setLoading);
+
+      expect(setError).toHaveBeenCalledWith(
+        'An error occurred while fetching data. Please try again later.'
+      );
+    });
+
+    it('handles network errors gracefully', async () => {
+      global.fetch.mockRejectedValueOnce(new Error('Network error'));
+
+      const setPoetData = vi.fn();
+      const setError = vi.fn();
+      const setLoading = vi.fn();
+
+      await fetchRandomPoem(setPoetData, setError, setLoading);
+
+      expect(setError).toHaveBeenCalledWith(
+        'An error occurred while fetching data. Please try again later.'
+      );
+      expect(setLoading).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('callApi - Edge Cases', () => {
+    it('calls random endpoint when author is empty string', async () => {
+      const mockData = [{ title: 'Random Poem' }];
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      await callApi('', '');
+
+      expect(global.fetch).toHaveBeenCalledWith(`${BASE_ENDPOINT}/random`);
+    });
+
+    it('handles json parsing errors', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => {
+          throw new Error('JSON parse error');
+        },
+      });
+
+      const result = await callApi('Emily Dickinson', null);
+
+      expect(result.data).toBeNull();
+      expect(result.errorOccurred).toBe(false);
     });
   });
 });

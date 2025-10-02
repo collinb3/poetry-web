@@ -107,4 +107,54 @@ describe("SearchBar", () => {
 
     expect(mockOnSearch).toHaveBeenCalledTimes(1);
   });
+
+  it("renders randomize button", () => {
+    const mockSetAuthor = vi.fn();
+    const mockSetTitle = vi.fn();
+    const mockOnSearch = vi.fn();
+    const mockOnRandom = vi.fn();
+
+    render(
+      <SearchBar
+        author=""
+        setAuthor={mockSetAuthor}
+        title=""
+        setTitle={mockSetTitle}
+        onSearch={mockOnSearch}
+        onRandom={mockOnRandom}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: /find for a random poem/i })
+    ).toBeInTheDocument();
+  });
+
+  it("calls onRandom and clears inputs when randomize button is clicked", async () => {
+    const user = userEvent.setup();
+    const mockSetAuthor = vi.fn();
+    const mockSetTitle = vi.fn();
+    const mockOnSearch = vi.fn();
+    const mockOnRandom = vi.fn();
+
+    render(
+      <SearchBar
+        author="Emily Dickinson"
+        setAuthor={mockSetAuthor}
+        title="Hope"
+        setTitle={mockSetTitle}
+        onSearch={mockOnSearch}
+        onRandom={mockOnRandom}
+      />
+    );
+
+    const randomButton = screen.getByRole("button", {
+      name: /find for a random poem/i,
+    });
+    await user.click(randomButton);
+
+    expect(mockOnRandom).toHaveBeenCalledTimes(1);
+    expect(mockSetAuthor).toHaveBeenCalledWith("");
+    expect(mockSetTitle).toHaveBeenCalledWith("");
+  });
 });

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import SearchBar from "./components/SearchBar.jsx";
 import PoetryResults from "./components/PoetryResults.jsx";
-import { fetchPoetData } from "./services/ApiService.js";
+import { fetchPoetData, fetchRandomPoem } from "./services/ApiService.js";
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -41,6 +41,10 @@ function App() {
             setTitle={setTitle}
             onSearch={() => {
               fetchPoetData(author, title, setPoetData, setError, setLoading);
+              setPageNumber(1);
+            }}
+            onRandom={() => {
+              fetchRandomPoem(setPoetData, setError, setLoading);
               setPageNumber(1);
             }}
           />

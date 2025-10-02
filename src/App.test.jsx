@@ -165,4 +165,211 @@ describe("App", () => {
 
     expect(screen.queryByText(/Poem Details/i)).not.toBeInTheDocument();
   });
+
+  it("calls fetchPoetData with correct initial parameters on mount", () => {
+    const mockFetch = vi
+      .spyOn(ApiService, "fetchPoetData")
+      .mockImplementation(() => {});
+
+    render(<App />);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "Emily Dickinson",
+      undefined,
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function)
+    );
+  });
+
+  it("resets page number when search is performed", async () => {
+    const user = userEvent.setup();
+    const mockPoems = Array.from({ length: 10 }, (_, i) => ({
+      title: `Poem ${i + 1}`,
+      author: "Emily Dickinson",
+      lines: ["Line 1"],
+      linecount: 1,
+    }));
+
+    vi.spyOn(ApiService, "fetchPoetData").mockImplementation(
+      (author, title, setData, setError, setLoading) => {
+        setData(mockPoems);
+        setLoading(false);
+      }
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Poem 1")).toBeInTheDocument();
+    });
+
+    // Go to page 2
+    const nextButton = screen.getByRole("button", { name: /next/i });
+    await user.click(nextButton);
+
+    expect(screen.getByText(/Page 2 of 2/i)).toBeInTheDocument();
+
+    // Perform new search
+    const searchButton = screen.getByRole("button", { name: /^search$/i });
+    await user.click(searchButton);
+
+    // Should be back on page 1
+    await waitFor(() => {
+      expect(screen.getByText(/Page 1 of 2/i)).toBeInTheDocument();
+    });
+  });
+
+  it("resets page number when randomize is clicked", async () => {
+    const user = userEvent.setup();
+    const mockPoems = Array.from({ length: 10 }, (_, i) => ({
+      title: `Poem ${i + 1}`,
+      author: "Emily Dickinson",
+      lines: ["Line 1"],
+      linecount: 1,
+    }));
+
+    vi.spyOn(ApiService, "fetchPoetData").mockImplementation(
+      (author, title, setData, setError, setLoading) => {
+        setData(mockPoems);
+        setLoading(false);
+      }
+    );
+
+    vi.spyOn(ApiService, "fetchRandomPoem").mockImplementation(
+      (setData, setError, setLoading) => {
+        setData(mockPoems);
+        setLoading(false);
+      }
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Poem 1")).toBeInTheDocument();
+    });
+
+    // Go to page 2
+    const nextButton = screen.getByRole("button", { name: /next/i });
+    await user.click(nextButton);
+
+    expect(screen.getByText(/Page 2 of 2/i)).toBeInTheDocument();
+
+    // Click randomize
+    const randomButton = screen.getByRole("button", {
+      name: /find for a random poem/i,
+    });
+    await user.click(randomButton);
+
+    // Should be back on page 1
+    await waitFor(() => {
+      expect(screen.getByText(/Page 1 of 2/i)).toBeInTheDocument();
+    });
+  });
+
+  it("calls fetchRandomPoem when randomize button is clicked", async () => {
+    const user = userEvent.setup();
+    const mockFetch = vi
+      .spyOn(ApiService, "fetchPoetData")
+      .mockImplementation(() => {});
+    const mockRandomFetch = vi
+      .spyOn(ApiService, "fetchRandomPoem")
+      .mockImplementation(() => {});
+
+    render(<App />);
+
+    const randomButton = screen.getByRole("button", {
+      name: /find for a random poem/i,
+    });
+    await user.click(randomButton);
+
+    expect(mockRandomFetch).toHaveBeenCalledTimes(1);
+    expect(mockRandomFetch).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function)
+    );
+  });
+
+  it("updates author and title inputs correctly", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(ApiService, "fetchPoetData").mockImplementation(() => {});
+
+    render(<App />);
+
+    const authorInput = screen.getByLabelText(/author/i);
+    const titleInput = screen.getByLabelText(/title/i);
+
+    await user.clear(authorInput);
+    await user.type(authorInput, "Shakespeare");
+    await user.type(titleInput, "Sonnet 18");
+
+    expect(authorInput).toHaveValue("Shakespeare");
+    expect(titleInput).toHaveValue("Sonnet 18");
+  });
+
+  it("displays poem author in details view", async () => {
+    const user = userEvent.setup();
+    const mockData = [
+      {
+        title: "Test Poem",
+        author: "Emily Dickinson",
+        lines: ["Line 1", "Line 2"],
+        linecount: 2,
+      },
+    ];
+
+    vi.spyOn(ApiService, "fetchPoetData").mockImplementation(
+      (author, title, setData, setError, setLoading) => {
+        setData(mockData);
+        setLoading(false);
+      }
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Poem")).toBeInTheDocument();
+    });
+
+    const moreDetailsButton = screen.getByRole("button", {
+      name: /more details/i,
+    });
+    await user.click(moreDetailsButton);
+
+    expect(screen.getByText(/Author: Emily Dickinson/i)).toBeInTheDocument();
+  });
+
+  it("displays poem lines in details view", async () => {
+    const user = userEvent.setup();
+    const mockData = [
+      {
+        title: "Test Poem",
+        author: "Emily Dickinson",
+        lines: ["First line of poem", "Second line of poem"],
+        linecount: 2,
+      },
+    ];
+
+    vi.spyOn(ApiService, "fetchPoetData").mockImplementation(
+      (author, title, setData, setError, setLoading) => {
+        setData(mockData);
+        setLoading(false);
+      }
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Poem")).toBeInTheDocument();
+    });
+
+    const moreDetailsButton = screen.getByRole("button", {
+      name: /more details/i,
+    });
+    await user.click(moreDetailsButton);
+
+    expect(screen.getByText(/First line of poem/i)).toBeInTheDocument();
+    expect(screen.getByText(/Second line of poem/i)).toBeInTheDocument();
+  });
 });
